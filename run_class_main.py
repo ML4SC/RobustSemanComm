@@ -5,6 +5,7 @@ import torch
 import utils
 import model   
 import torch.backends.cudnn as cudnn
+from tqdm import tqdm
 
 from engine import *
 from pathlib import Path
@@ -30,6 +31,7 @@ def main(args):
     utils.init_distributed_mode(args)
     device = torch.device(args.device)
     seed_initial(seed=args.seed)
+    print(args)
     ####################################### Get the model
     model = get_model(args)
     if args.resume:
@@ -104,6 +106,8 @@ def main(args):
     
     
     ################################## Auto load the model in the model record folder
+    args.eval = False
+    print(args.eval)
     if args.eval:
         test_stats = evaluate( net=model, dataloader=dataloader_val, 
                             device=device, criterion=criterion, train_type=args.train_type, if_attack=args.if_attack_test)
@@ -114,7 +118,7 @@ def main(args):
     print(f"Start training for {args.epochs} epochs")
     max_accuracy = 0.0
     start_time = time.time()
-    for epoch in range(args.start_epoch, args.epochs):
+    for epoch in tqdm(range(args.start_epoch, args.epochs), desc="Epochs"):
         if args.distributed:
             trainloader.sampler.set_epoch(epoch)
 
@@ -125,6 +129,8 @@ def main(args):
                 update_freq=args.update_freq)
     
         if args.output_dir and args.save_ckpt:
+            # print(epoch)
+            # print(args.epochs)
             if (epoch + 1) % args.save_freq == 0 or epoch + 1 == args.epochs:
                 utils.save_model(
                     args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
@@ -140,7 +146,10 @@ def main(args):
 
 
 if __name__ == '__main__':
+    # import sys
+    # print(sys.argv)
     opts = get_args()
+    print(opts)
     if opts.output_dir:
         Path(opts.output_dir).mkdir(parents=True, exist_ok=True)
     main(opts)

@@ -359,7 +359,7 @@ class ViTEncoder_FIM(nn.Module):
         x_vis = x[~bm_pos].reshape(B, -1, C)
         for blk in self.blocks:
             x_vis = blk(x_vis)
-        for blk in self.blocks_cas:
+        for blk in self.blocks_fim:
             x_vis, class_output = blk(x_vis, bm_pos, y)
             cls_wise_output.append(class_output)    
         x_vis = self.norm(x_vis)

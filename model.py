@@ -165,6 +165,8 @@ class ViT_FIM_CLS(nn.Module):
 
 @register_model
 def ViT_Van_model(pretrained=False, **kwargs):
+    kwargs = {key: value for key, value in kwargs.items() if key != 'pretrained_cfg'}
+    kwargs = {key: value for key, value in kwargs.items() if key != 'pretrained_cfg_overlay'}
     model = ViT_Van_CLS(
         img_size=224,
         patch_size=16,
@@ -188,6 +190,14 @@ def ViT_Van_model(pretrained=False, **kwargs):
         
 @register_model
 def ViT_FIM_model_S(pretrained=False, **kwargs):
+    # pretrained_cfg = kwargs.get("pretrained_cfg", True) 
+    # print(f"Received pretrained_cfg: {pretrained_cfg}")
+    # # print(**kwargs)
+    # # kwargs = {key: value for key, value in vars(**kwargs).items() if key != 'pretrained_cfg'}
+    # print('kwargs:', kwargs)
+    kwargs = {key: value for key, value in kwargs.items() if key != 'pretrained_cfg'}
+    kwargs = {key: value for key, value in kwargs.items() if key != 'pretrained_cfg_overlay'}
+    print('Filtered kwargs:', kwargs)
     model = ViT_FIM_CLS(
         img_size=224,
         patch_size=16,
@@ -211,6 +221,8 @@ def ViT_FIM_model_S(pretrained=False, **kwargs):
 
 @register_model
 def ViT_FIM_model_L(pretrained=False, **kwargs):
+    kwargs = {key: value for key, value in kwargs.items() if key != 'pretrained_cfg'}
+    kwargs = {key: value for key, value in kwargs.items() if key != 'pretrained_cfg_overlay'}
     model = ViT_FIM_CLS(
         img_size=224,
         patch_size=16,

@@ -52,6 +52,7 @@ class Gen_ma(object):
 def build_dataset(is_train, args):
     transform = Gen_ma(is_train, args)
     if args.data_set.startswith('cifar_S32'):
+        # print(args.data_path)
         dataset = CIFAR_M(args.data_path, train=is_train, transform=transform, 
                                         download=True)
     elif args.data_set.startswith('cifar_S224'):

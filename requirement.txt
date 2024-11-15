@@ -1,0 +1,10 @@
+timm
+thop
+pytorch_msssim
+scikit-learn
+nltk
+pytorch_transformers
+transformers
+einops
+pandas
+numpy==1.23
