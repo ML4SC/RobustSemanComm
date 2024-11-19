@@ -14,6 +14,7 @@ from einops import rearrange
 from typing import Iterable, Optional
 from timm.utils import accuracy, AverageMeter
 from nltk.translate.bleu_score import sentence_bleu
+import torch.nn.functional as F
 ####################################
 beta = 1.0
 
@@ -23,11 +24,13 @@ def get_loss_scale_for_deepspeed(model):
 
 @torch.no_grad()
 def evaluate(net: torch.nn.Module, dataloader: Iterable, 
-                  device: torch.device, criterion: torch.nn.Module, train_type='fim', if_attack=False, print_freq=10):
+                  device: torch.device, criterion: torch.nn.Module, train_type='fim', if_attack=False, print_freq=10, plot=False):
     net.eval()
     acc_meter = AverageMeter()
     loss_meter = AverageMeter()
     attack =FGSM_REG(net, 12./255., 2./255., min_val=0, max_val=1, max_iters=8)
+    Latents = None
+    Label = None
     with torch.no_grad():
         for batch_idx, (imgs, targets) in enumerate(dataloader):
             imgs, bm_pos = imgs
@@ -41,7 +44,18 @@ def evaluate(net: torch.nn.Module, dataloader: Iterable,
                 imgs = per_data
             outputs = net(img=imgs, bm_pos=bm_pos, target=targets, _eval=True) 
             outputs_x = outputs['out_x']
-            loss = criterion(outputs_x, targets)
+            probabilities_x = F.softmax(outputs_x, dim=1)
+            if Latents == None:
+                Latents = outputs['out_vq'].cpu()
+                # print(outputs['out_c'])
+                # print(targets.cpu())
+                # print(probabilities_x)
+                Label = targets.cpu() #torch.tensor(outputs['out_c'])
+                
+            else:
+                Latents = torch.cat((Latents, outputs['out_vq'].cpu()), dim=0)
+                Label = torch.cat((Label, targets.cpu()), dim=0) #torch.cat((Label, torch.tensor(outputs['out_c'])), dim=0)
+            loss = criterion(probabilities_x, targets)
             batch_size = targets.size(0)
 
             idx, predicted = outputs_x.max(1)
@@ -52,7 +66,10 @@ def evaluate(net: torch.nn.Module, dataloader: Iterable,
                         len(dataloader.dataset), loss_meter.avg, acc_meter.avg*100))   
     test_stat = {'loss': loss_meter.avg,
         'acc': acc_meter.avg}  
-    return test_stat
+    if plot == True:
+        return test_stat , Latents, Label
+    else:
+        return test_stat
     
 
 def train_class_batch(model, samples, targets, bm_pos, criterion, train_type):

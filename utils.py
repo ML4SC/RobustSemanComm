@@ -11,7 +11,8 @@ import numpy as np
 import torch.distributed as dist
 
 from pathlib import Path
-from torch._six import inf
+# from torch._six import inf
+inf = float('inf')
 import torch.nn.functional as F
 from timm.utils import get_state_dict
 from timm.models import create_model
@@ -32,7 +33,7 @@ def get_model(args):
     print(f"Creating model: {args.model}")
     model = create_model(
         args.model,
-        pretrained=False,
+        pretrained=False, # default is False
         drop_path_rate=args.drop_path,
         drop_block_rate=None,
     )

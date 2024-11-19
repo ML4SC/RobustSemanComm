@@ -148,8 +148,8 @@ class ViT_FIM_CLS(nn.Module):
         else:
             noise_var = torch.FloatTensor([1]) * 10**(-test_snr/20)  
             noise_snr = test_snr
-        x, cls_out = self.img_encoder(img, bm_pos, target)
-        x = self.encoder_to_channel(x)
+        x_vq, cls_out = self.img_encoder(img, bm_pos, target)
+        x = self.encoder_to_channel(x_vq)
         # x, vq_loss = self.vq_layer(x, noise_snr, self.bit_per_digit)
         # x = power_norm_batchwise(x)
         # x = self.channel.AWGN(x, noise_var.item())
@@ -157,7 +157,8 @@ class ViT_FIM_CLS(nn.Module):
         x = self.img_decoder(x)
         # x = self.head(x.view(x.shape[0],-1))
         x = self.head(x.mean(1))
-        out['out_x'] = x      
+        out['out_x'] = x    
+        out['out_vq'] = x_vq 
         out['out_c'] = cls_out
         # out['vq_loss'] = vq_loss
         return out

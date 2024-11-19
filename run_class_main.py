@@ -1,5 +1,8 @@
 import datetime
 import numpy as np
+import pandas as pd
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
 import time
 import torch
 import utils
@@ -107,17 +110,42 @@ def main(args):
     
     ################################## Auto load the model in the model record folder
     args.eval = False
+    args.if_attack_test = False
     print(args.eval)
+    print(args.if_attack_test)
     if args.eval:
-        test_stats = evaluate( net=model, dataloader=dataloader_val, 
-                            device=device, criterion=criterion, train_type=args.train_type, if_attack=args.if_attack_test)
+        test_stats, latent, label = evaluate( net=model, dataloader=dataloader_val, 
+                            device=device, criterion=criterion, train_type=args.train_type, if_attack=args.if_attack_test, plot=args.eval)
+        print(test_stats)
         print(f"Accuracy of the network on the {len(valset)} test samples: {test_stats['acc']*100:.3f}")
+        print(np.array(latent).shape)
+        print(np.array(label).shape)
+
+        flattened_data = latent.reshape(latent.shape[0],-1)
+
+        # Perform PCA to reduce dimensions to 2
+        pca = PCA(n_components=2)
+        data_2d = pca.fit_transform(flattened_data)
+
+        # Visualize the PCA results
+        plt.figure(figsize=(10, 8))
+        scatter = plt.scatter(data_2d[:, 0], data_2d[:, 1], alpha=1, s=5, c=label, cmap='plasma')
+        plt.colorbar(scatter, label='Labels')
+        plt.title("PCA Visualization of Patch Embeddings")
+        plt.xlabel("Principal Component 1")
+        plt.ylabel("Principal Component 2")
+        save_path = '/mnt/c/Users/npham3/RobustSemanComm/' + args.model + '.jpg'
+        plt.savefig(save_path)
         exit(0)
 
     ################################## Start Training the T-DeepSC
     print(f"Start training for {args.epochs} epochs")
     max_accuracy = 0.0
     start_time = time.time()
+
+    test_losses = []
+    test_accuracies = []
+
     for epoch in tqdm(range(args.start_epoch, args.epochs), desc="Epochs"):
         if args.distributed:
             trainloader.sampler.set_epoch(epoch)
@@ -137,12 +165,23 @@ def main(args):
                     loss_scaler=loss_scaler, epoch=epoch, model_ema=None)
         if dataloader_val is not None:
             test_stats = evaluate(net=model, dataloader=dataloader_val, 
-                                device=device, criterion=criterion, train_type=args.train_type, if_attack=args.if_attack_test)
-            print(f"Accuracy of the network on the {len(valset)} test images: {test_stats['acc']*100:.3f}")      
+                                device=device, criterion=criterion, train_type=args.train_type, if_attack=args.if_attack_test, plot=args.eval)
+            print(f"Accuracy of the network on the {len(valset)} test images: {test_stats['acc']*100:.3f}")   
+            test_accuracies.append(test_stats['acc']*100)   
+            test_accuracies.append(test_stats['loss'])   
             
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
+    if args.output_dir:
+        test_stats_df = pd.DataFrame({
+            # 'Epoch': range(1, len(test_losses) + 1),
+            'Test Loss': test_losses,
+            'Test Accuracy': test_accuracies
+        })
+        csv_file_path = f"{args.output_dir}/test_stats.csv"
+        test_stats_df.to_csv(csv_file_path, index=False)
+        print(f"Test statistics saved to {csv_file_path}")
 
 
 if __name__ == '__main__':
